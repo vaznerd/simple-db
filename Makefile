@@ -1,8 +1,5 @@
 main: main.c
-	gcc -Wall -Wextra -O2 main.c -o ./build/sdb
-
-run: main
-	./build/sdb
+	gcc -Wall -Wextra -O2 main.c -o sdb
 
 clean:
 	rm ./build/*
