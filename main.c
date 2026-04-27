@@ -1,9 +1,18 @@
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+
+int ensure_dir(const char *filepath);
+char *expand_tilde(const char *path);
+char *get_pair(FILE *fp);
 
 int set(int argc, char **argv);
 int get(char *key);
 int del(char *key);
+int update(char *key);
+int dedupe(void);
 int exists(char *key);
 int keys(char *regex);
 int help(void);
@@ -21,13 +30,165 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "set") == 0) {
         if (argc == 2) {
             printf("Example usage of sdb set:\n");
-            printf("    sdb get key=value key2=value2\n");
+            printf("    sdb set key=value key2=value2\n");
+            return 1;
         }
         set(argc, argv);
+    } else if (strcmp(argv[1], "get") == 0) {
+        if (argc == 2) {
+            printf("Example usage of sdb get:\n");
+            printf("    sdb get key\n");
+            return 1;
+        }
+        get(argv[2]);
+    } else {
+        printf("Usage: sdb <command> [args]\n");
+        printf("Commands:\n");
+        printf("    set key=value    Set key to value\n");
+        printf("    get key          Get value for key\n");
+        printf("    -h, --help       Show this help\n");
+        return 1;
     }
     return 0;
 }
 
 int set(int argc, char **argv) {
+    const char *file_name = "~/.local/share/sdb/database.txt";
+    char *real_path = expand_tilde(file_name);
+    if (!real_path) {
+        fprintf(stderr, "Cannot expand path or $HOME missing\n");
+        return 1;
+    }
+
+    if (ensure_dir(real_path) != 0) {
+        free(real_path);
+        return 1;
+    }
+
+    FILE *fp = fopen(real_path, "a");
+    if (!fp) {
+        perror("fopen");
+        return 1;
+    }
+    for (int i = 2; i < argc; i++) {
+        if (argv[i][0] == '=') {
+            printf("Key's first character cannot be '='\n");
+            return 1;
+        }
+        char *position = strchr(argv[i], '=');
+        if (!position) {
+            printf("Give a key value pair as key=value.\n");
+            return 1;
+        }
+        fprintf(fp, "%s\n", argv[i]);
+    }
+    fclose(fp);
+    return 0;
+}
+
+int get(char *key) {
+    const char *file_name = "~/.local/share/sdb/database.txt";
+    char *real_path = expand_tilde(file_name);
+    if (!real_path) {
+        fprintf(stderr, "Cannot expand path to database or $HOME missing\n");
+        return 1;
+    }
+
+    if (ensure_dir(real_path) != 0) {
+        free(real_path);
+        fprintf(stderr, "database file does not exist\n");
+        return 1;
+    }
+
+    FILE *fp = fopen(real_path, "r");
+    if (!fp) {
+        perror("fopen");
+        return 1;
+    }
+
+    char *pair;
+    while (NULL != (pair = get_pair(fp))) {
+        char temp_string[strlen(pair) + 1];
+        strcpy(temp_string, pair);
+        char *position = strchr(temp_string, '=');
+        if (position != NULL) {
+            *position = '\0';
+        }
+        if (strcmp(key, temp_string) == 0) {
+            printf("%s\n", pair);
+            free(pair);
+            return 0;
+        }
+        free(pair);
+    }
+    printf("Pair does not exist\n");
+    return 1;
+}
+
+char *get_pair(FILE *fp) {
+    size_t len = 0;
+    char *pair;
+    int character;
+    size_t size = sizeof(character);
+    pair = malloc(size);
+    if (!pair)
+        return pair;
+    while (EOF != (character = fgetc(fp)) && character != '\n') {
+        pair[len++] = character;
+        if (len == size) {
+            size += size;
+            pair = realloc(pair, size);
+            if (!pair)
+                return pair;
+        }
+    }
+    pair[len++] = '\0';
+    if (character == EOF) {
+        return NULL;
+    }
+    return realloc(pair, len);
+}
+
+char *expand_tilde(const char *path) {
+    if (path[0] != '~' || path[1] != '/')
+        return NULL;
+
+    const char *home_path = getenv("HOME");
+    if (!home_path)
+        return NULL;
+
+    size_t home_len = strlen(home_path);
+    size_t rest_len = strlen(path + 2);
+    // final_path = /home/piyush + / + .local/share/sdb + \0
+    char *final_path = malloc(home_len + 1 + rest_len + 1);
+    if (!final_path)
+        return NULL;
+
+    strcpy(final_path, home_path);
+    final_path[home_len] = '/';
+    strcpy(final_path + home_len + 1, path + 2);
+
+    return final_path;
+}
+
+int ensure_dir(const char *filepath) {
+    size_t filepath_len = strlen(filepath + 1);
+    char copy[filepath_len];
+    strcpy(copy, filepath);
+
+    char *last = strrchr(copy, '/');
+    if (!last) {
+        perror("strrchr in ensure_dir()");
+        return 1;
+    }
+
+    *last = '\0';
+
+    if (mkdir(copy, 0755) == 0) {
+        printf("Created directory: %s\n", copy);
+    } else if (errno != EEXIST) {
+        perror("mkdir in ensure_dir()");
+        return 1;
+    }
     return 0;
 }
