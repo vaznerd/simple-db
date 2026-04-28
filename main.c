@@ -6,7 +6,8 @@
 
 int ensure_dir(const char *filepath);
 char *expand_tilde(const char *path);
-char *get_pair(FILE *fp);
+char *get_pair(FILE *fp, char *pair);
+int line_no_of_pair(FILE *fp, char *key);
 
 int set(int argc, char **argv);
 int get(char *key);
@@ -107,7 +108,9 @@ int get(char *key) {
     }
 
     char *pair;
-    while (NULL != (pair = get_pair(fp))) {
+    char *malloced_pair;
+    malloced_pair = malloc(sizeof(char));
+    while (NULL != (pair = get_pair(fp, malloced_pair))) {
         char temp_string[strlen(pair) + 1];
         strcpy(temp_string, pair);
         char *position = strchr(temp_string, '=');
@@ -121,16 +124,82 @@ int get(char *key) {
         }
         free(pair);
     }
+    free(pair);
     printf("Pair does not exist\n");
     return 1;
 }
 
-char *get_pair(FILE *fp) {
-    size_t len = 0;
+int del(char *key) {
+    const char *file_name = "~/.local/share/sdb/database.txt";
+    char *real_path = expand_tilde(file_name);
+    if (!real_path) {
+        fprintf(stderr, "Cannot expand path to database or $HOME missing\n");
+        return 1;
+    }
+
+    if (ensure_dir(real_path) != 0) {
+        free(real_path);
+        fprintf(stderr, "database file does not exist\n");
+        return 1;
+    }
+
+    FILE *fp = fopen(real_path, "r");
+    if (!fp) {
+        perror("fopen");
+        return 1;
+    }
+
+    int line_no;
+    line_no = line_no_of_pair(fp, key);
+    if (line_no == -1) {
+        return 1;
+    }
+    FILE *temp_fp;
+    temp_fp = fopen("/tmp/sdb/temp_db.txt", "w");
+    if (!temp_fp)
+        return 1;
+
     char *pair;
+    char *malloced_pair;
+    malloced_pair = malloc(sizeof(char));
+    while ()
+
+        fclose(fp);
+    fclose(temp_fp);
+    remove("~/.local/share/sdb/database.txt");
+    rename("/tmp/sdb/temp_db.txt", "~/.local/share/sdb/database.txt");
+    return 0;
+}
+
+int line_no_of_pair(FILE *fp, char *key) {
+    int line_no = 0;
+    char *pair;
+    char *malloced_pair;
+    malloced_pair = malloc(sizeof(char));
+    while (NULL != (pair = get_pair(fp, malloced_pair))) {
+        char temp_string[strlen(pair) + 1];
+        strcpy(temp_string, pair);
+        char *position = strchr(temp_string, '=');
+        if (position != NULL) {
+            *position = '\0';
+        }
+        if (strcmp(key, temp_string) == 0) {
+            printf("%s\n", pair);
+            free(pair);
+            return line_no;
+        }
+        line_no++;
+        free(pair);
+    }
+    free(pair);
+    printf("Pair does not exist\n");
+    return -1;
+}
+
+char *get_pair(FILE *fp, char *pair) {
+    size_t len = 0;
     int character;
     size_t size = sizeof(character);
-    pair = malloc(size);
     if (!pair)
         return pair;
     while (EOF != (character = fgetc(fp)) && character != '\n') {
