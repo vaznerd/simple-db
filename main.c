@@ -42,6 +42,13 @@ int main(int argc, char **argv) {
             return 1;
         }
         get(argv[2]);
+    } else if (strcmp(argv[1], "del") == 0) {
+        if (argc == 2) {
+            printf("Example usage of sdb del:\n");
+            printf("    sdb del key\n");
+            return 1;
+        }
+        del(argv[2]);
     } else {
         printf("Usage: sdb <command> [args]\n");
         printf("Commands:\n");
@@ -143,19 +150,29 @@ int del(char *key) {
 
     FILE *fp = fopen(real_path, "r");
     if (!fp) {
-        perror("fopen");
+        perror("fopen in del()");
         return 1;
     }
 
     int line_no;
     line_no = line_no_of_pair(fp, key);
     if (line_no == -1) {
+        fclose(fp);
         return 1;
     }
+
+    const char *temp_file = "~/.local/share/sdb/tmp.txt";
+    char *temp_path = expand_tilde(temp_file);
+    if (!real_path) {
+        fprintf(stderr, "Cannot expand path to database or $HOME missing\n");
+        return 1;
+    }
+
     FILE *temp_fp;
-    temp_fp = fopen("/tmp/sdb/temp_db.txt", "w");
+    temp_fp = fopen(temp_path, "w");
     if (!temp_fp) {
         perror("fopen in del()");
+        fclose(fp);
         return 1;
     }
 
@@ -165,25 +182,41 @@ int del(char *key) {
     malloced_pair = malloc(sizeof(char));
     if (!malloced_pair) {
         perror("malloc in del()");
+        free(malloced_pair);
+        fclose(fp);
+        fclose(temp_fp);
         return 1;
     }
+
+    rewind(fp);
     while (NULL != (pair = get_pair(fp))) {
-        if (line_no != current_line_no) {
+        if (line_no == current_line_no) {
+            current_line_no++;
             continue;
         } else {
-            if (fputs(pair, fp)) {
+            if (fputs(pair, temp_fp) == EOF) {
                 perror("fputs in del()");
+                free(pair);
+                fclose(fp);
+                fclose(temp_fp);
                 return 1;
             }
+            fputc('\n', temp_fp);
         }
         current_line_no++;
     }
-
     free(pair);
+    if (remove(real_path) == 0) {
+        if (rename(temp_path, real_path) == -1) {
+            fprintf(stderr, "Rename failed: %s (errno %d)\n", strerror(errno),
+                    errno);
+        }
+    } else {
+        perror("remove failed");
+        return 1;
+    }
     fclose(fp);
     fclose(temp_fp);
-    remove("~/.local/share/sdb/database.txt");
-    rename("/tmp/sdb/temp_db.txt", "~/.local/share/sdb/database.txt");
     return 0;
 }
 
