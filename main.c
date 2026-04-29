@@ -6,7 +6,7 @@
 
 int ensure_dir(const char *filepath);
 char *expand_tilde(const char *path);
-char *get_pair(FILE *fp, char *pair);
+char *get_pair(FILE *fp);
 int line_no_of_pair(FILE *fp, char *key);
 
 int set(int argc, char **argv);
@@ -109,9 +109,7 @@ int get(char *key) {
     }
 
     char *pair;
-    char *malloced_pair;
-    malloced_pair = malloc(sizeof(char));
-    while (NULL != (pair = get_pair(fp, malloced_pair))) {
+    while (NULL != (pair = get_pair(fp))) {
         char temp_string[strlen(pair) + 1];
         strcpy(temp_string, pair);
         char *position = strchr(temp_string, '=');
@@ -165,7 +163,11 @@ int del(char *key) {
     char *malloced_pair;
     int current_line_no = 0;
     malloced_pair = malloc(sizeof(char));
-    while (NULL != (pair = get_pair(fp, malloced_pair))) {
+    if (!malloced_pair) {
+        perror("malloc in del()");
+        return 1;
+    }
+    while (NULL != (pair = get_pair(fp))) {
         if (line_no != current_line_no) {
             continue;
         } else {
@@ -190,7 +192,11 @@ int line_no_of_pair(FILE *fp, char *key) {
     char *pair;
     char *malloced_pair;
     malloced_pair = malloc(sizeof(char));
-    while (NULL != (pair = get_pair(fp, malloced_pair))) {
+    if (!malloced_pair) {
+        perror("malloc in line_no_of_pair()");
+        return 1;
+    }
+    while (NULL != (pair = get_pair(fp))) {
         char temp_string[strlen(pair) + 1];
         strcpy(temp_string, pair);
         char *position = strchr(temp_string, '=');
@@ -210,12 +216,16 @@ int line_no_of_pair(FILE *fp, char *key) {
     return -1;
 }
 
-char *get_pair(FILE *fp, char *pair) {
+char *get_pair(FILE *fp) {
     size_t len = 0;
     int character;
     size_t size = sizeof(character);
-    if (!pair)
-        return pair;
+    char *pair;
+    pair = malloc(size);
+    if (!pair) {
+        perror("malloc in get()");
+        return NULL;
+    }
     while (EOF != (character = fgetc(fp)) && character != '\n') {
         pair[len++] = character;
         if (len == size) {
