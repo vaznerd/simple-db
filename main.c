@@ -102,6 +102,7 @@ int get(char *key) {
     }
 
     FILE *fp = fopen(real_path, "r");
+    free(real_path);
     if (!fp) {
         perror("fopen");
         return 1;
@@ -124,7 +125,6 @@ int get(char *key) {
         }
         free(pair);
     }
-    free(pair);
     printf("Pair does not exist\n");
     return 1;
 }
@@ -156,15 +156,29 @@ int del(char *key) {
     }
     FILE *temp_fp;
     temp_fp = fopen("/tmp/sdb/temp_db.txt", "w");
-    if (!temp_fp)
+    if (!temp_fp) {
+        perror("fopen in del()");
         return 1;
+    }
 
     char *pair;
     char *malloced_pair;
+    int current_line_no = 0;
     malloced_pair = malloc(sizeof(char));
-    while ()
+    while (NULL != (pair = get_pair(fp, malloced_pair))) {
+        if (line_no != current_line_no) {
+            continue;
+        } else {
+            if (fputs(pair, fp)) {
+                perror("fputs in del()");
+                return 1;
+            }
+        }
+        current_line_no++;
+    }
 
-        fclose(fp);
+    free(pair);
+    fclose(fp);
     fclose(temp_fp);
     remove("~/.local/share/sdb/database.txt");
     rename("/tmp/sdb/temp_db.txt", "~/.local/share/sdb/database.txt");
