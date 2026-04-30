@@ -366,29 +366,31 @@ int line_no_of_pair(FILE *fp, char *key) {
 }
 
 char *get_pair(FILE *fp) {
-    size_t len = 0;
+    size_t offset = 0;
     int character;
-    size_t size = sizeof(character);
+    size_t bufsize = 4;
     char *pair;
-    pair = malloc(size);
+    pair = malloc(bufsize);
     if (!pair) {
         perror("malloc in get()");
         return NULL;
     }
-    while (EOF != (character = fgetc(fp)) && character != '\n') {
-        pair[len++] = character;
-        if (len == size) {
-            size += size;
-            pair = realloc(pair, size);
-            if (!pair)
+    while (character = fgetc(fp), character != '\n' && character != EOF) {
+        pair[offset++] = character;
+        if (offset == bufsize) {
+            bufsize *= bufsize;
+            pair = realloc(pair, bufsize);
+            if (!pair) {
+                free(pair);
                 return pair;
+            }
         }
     }
-    pair[len++] = '\0';
-    if (character == EOF) {
+    if (character == EOF && offset == 0) {
         return NULL;
     }
-    return realloc(pair, len);
+    pair[offset++] = '\0';
+    return realloc(pair, offset);
 }
 
 char *expand_tilde(const char *path) {
