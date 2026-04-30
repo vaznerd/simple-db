@@ -15,7 +15,6 @@ int get(char *key);
 int del(char *key);
 int update(char *updated_pair, char **argv);
 int dedupe(void);
-int exists(char *key);
 int keys(char *regex);
 int help(void);
 int list(void);
@@ -57,21 +56,15 @@ int main(int argc, char **argv) {
             return 1;
         }
         update(argv[2], argv);
-    } else if (strcmp(argv[1], "exists") == 0) {
-        if (argc == 2) {
-            printf("Example usage of sdb exists:\n");
-            printf("    sdb exists key\n");
-            return 1;
-        }
-        exists(argv[2]);
     } else if (strcmp(argv[1], "dedupe") == 0) {
         dedupe();
     } else {
-        printf("Usage: sdb <command> [args]\n");
-        printf("Commands:\n");
-        printf("    set key=value    Set key to value\n");
-        printf("    get key          Get value for key\n");
-        printf("    -h, --help       Show this help\n");
+        if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+            help();
+            return 0;
+        }
+        printf("No such subcommand: %s\n", argv[1]);
+        printf("Use sdb --help for help\n");
         return 1;
     }
     return 0;
@@ -112,46 +105,6 @@ int set(int argc, char **argv) {
 }
 
 int get(char *key) {
-    const char *file_name = "~/.local/share/sdb/database.txt";
-    char *real_path = expand_tilde(file_name);
-    if (!real_path) {
-        fprintf(stderr, "Cannot expand path to database or $HOME missing\n");
-        return 1;
-    }
-
-    if (ensure_dir(real_path) != 0) {
-        free(real_path);
-        fprintf(stderr, "database file does not exist\n");
-        return 1;
-    }
-
-    FILE *fp = fopen(real_path, "r");
-    free(real_path);
-    if (!fp) {
-        perror("fopen");
-        return 1;
-    }
-
-    char *pair;
-    while (NULL != (pair = get_pair(fp))) {
-        char temp_string[strlen(pair) + 1];
-        strcpy(temp_string, pair);
-        char *position = strchr(temp_string, '=');
-        if (position != NULL) {
-            *position = '\0';
-        }
-        if (strcmp(key, temp_string) == 0) {
-            printf("%s\n", pair);
-            free(pair);
-            return 0;
-        }
-        free(pair);
-    }
-    printf("Pair does not exist\n");
-    return 1;
-}
-
-int exists(char *key) {
     const char *file_name = "~/.local/share/sdb/database.txt";
     char *real_path = expand_tilde(file_name);
     if (!real_path) {
@@ -473,6 +426,18 @@ int dedupe(void) {
     }
     fclose(fin);
     fclose(fout);
+    return 0;
+}
+
+int help(void) {
+    printf("Usage: sdb <command> [args]\n");
+    printf("Commands:\n");
+    printf("    set key=value    Set key to value\n");
+    printf("    del key          delete a pair\n");
+    printf("    get key          Get value for key\n");
+    printf("    list             List all the pairs\n");
+    printf("    keys regex       List all the pairs with that regex pattern\n");
+    printf("    -h, --help       Show this help\n");
     return 0;
 }
 
