@@ -1,8 +1,0 @@
-sdb set key-value
-sdb get key
-sdb del key
-sdb list
-sdb exists key
-sdb keys key regex pattern
-sdb -h
-sdb --help
