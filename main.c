@@ -429,6 +429,10 @@ int dedupe(void) {
     return 0;
 }
 
+int keys(char *regex){
+    return 0;
+}
+
 int help(void) {
     printf("Usage: sdb <command> [args]\n");
     printf("Commands:\n");
