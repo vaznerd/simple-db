@@ -15,7 +15,6 @@ int get(char *key);
 int del(char *key);
 int update(char *updated_pair, char **argv);
 int dedupe(void);
-int keys(char *regex);
 int help(void);
 int list(void);
 
@@ -429,9 +428,6 @@ int dedupe(void) {
     return 0;
 }
 
-int keys(char *regex){
-    return 0;
-}
 
 int help(void) {
     printf("Usage: sdb <command> [args]\n");
@@ -440,7 +436,6 @@ int help(void) {
     printf("    del key          delete a pair\n");
     printf("    get key          Get value for key\n");
     printf("    list             List all the pairs\n");
-    printf("    keys regex       List all the pairs with that regex pattern\n");
     printf("    -h, --help       Show this help\n");
     return 0;
 }
