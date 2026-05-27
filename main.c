@@ -16,7 +16,6 @@ int del(char *key);
 int update(char *updated_pair, char **argv);
 int dedupe(void);
 int help(void);
-int list(void);
 
 int main(int argc, char **argv) {
     if (argc < 2) {
@@ -24,6 +23,7 @@ int main(int argc, char **argv) {
         printf("Commands:\n");
         printf("    set key=value    Set key to value\n");
         printf("    get key          Get value for key\n");
+        printf("    del key          delete a pair\n");
         printf("    -h, --help       Show this help\n");
         return 0;
     }
@@ -428,14 +428,14 @@ int dedupe(void) {
     return 0;
 }
 
-
 int help(void) {
     printf("Usage: sdb <command> [args]\n");
     printf("Commands:\n");
     printf("    set key=value    Set key to value\n");
-    printf("    del key          delete a pair\n");
     printf("    get key          Get value for key\n");
-    printf("    list             List all the pairs\n");
+    printf("    del key          delete a pair\n");
+    printf("    update           Update the pair\n");
+    printf("    dedupe           Deduplication of DB\n");
     printf("    -h, --help       Show this help\n");
     return 0;
 }
