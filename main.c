@@ -490,19 +490,21 @@ char *get_pair(FILE *fp) {
     while (character = fgetc(fp), character != '\n' && character != EOF) {
         // while (EOF != (character = fgetc(fp)) && character != '\n') {
         if (offset == bufsize) {
-            bufsize *= bufsize;
-            pair = realloc(pair, bufsize);
-            if (!pair) {
+            bufsize *= 2;
+            char *tmp = realloc(pair, bufsize);
+            if (!tmp) {
                 free(pair);
-                return pair;
+                return NULL;
             }
+            pair = tmp;
         }
         pair[offset++] = character;
     }
+    // when the line has only EOF and nothing else
     if (character == EOF && offset == 0) {
         return NULL;
     }
-    pair[offset++] = '\0';
+    pair[offset] = '\0';
     return realloc(pair, offset);
 }
 
